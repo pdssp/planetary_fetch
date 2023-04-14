@@ -1,0 +1,2 @@
+python3 -m venv planetary_fetch-env && export PYTHONPATH=. && export PATH=/home/malapert/Work/planetary_fetch/planetary_fetch-env/bin:/home/malapert/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+source "/home/malapert/Work/planetary_fetch/planetary_fetch-env/bin/activate"
