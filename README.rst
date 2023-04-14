@@ -28,7 +28,7 @@ To install Planetary Fetch, run this command in your terminal:
 
 .. code-block:: console
 
-    $ pip install planetary_fetch
+    $ pip install git+https://github.com/pdssp/planetary_fetch
 
 This is the preferred method to install Planetary Fetch, as it will always install the most recent stable release.
 
@@ -81,18 +81,12 @@ Development
         $ make install-dev
 
 
-To get more information about the preconfigured tasks:
-
-.. code-block:: console
-
-        $ make help
-
 Usage
 -----
 
-To use Planetary Fetch in a project::
+.. code-block:: console
 
-    import planetary_fetch
+        $ planetary_fetch -h
 
 
 
