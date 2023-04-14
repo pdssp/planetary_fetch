@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 class PlanetaryFetchLib:
     """The main library that downloads PDS files."""
 
-    def __init__(self, directory: str, *args, **kwargs):
+    def __init__(self, directory: str, **kwargs):
         """Initialize the PlanetaryFetchLib object.
 
         Args:
@@ -254,8 +254,8 @@ class Files:
         self.file_organizer.filename = filename
         with open(
             os.path.join(self.file_organizer.organize(), filename), "wb"
-        ) as f:
-            f.write(response.content)
+        ) as file:
+            file.write(response.content)
         return f"{filename} downloaded"
 
     def download(self):
@@ -323,10 +323,20 @@ class FileOrganizer:
 
     @property
     def filename(self) -> str:
+        """Returns filename.
+
+        Returns:
+            str: filename
+        """
         return self.__filename
 
     @filename.setter
     def filename(self, value: str):
+        """Set filename
+
+        Args:
+            value (str): value
+        """
         self.__filename = value
 
     def _build_directory_path(self, obs_type: str) -> str:
