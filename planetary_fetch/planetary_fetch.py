@@ -46,6 +46,10 @@ from ._version import __name_soft__
 logger = logging.getLogger(__name__)
 
 
+class NoProductFoundException(Exception):
+    """No product found"""
+
+
 class PlanetaryFetchLib:
     """The main library that downloads PDS files."""
 
@@ -135,10 +139,13 @@ class PlanetaryFetchLib:
         """
         pds_request = PdsRequest(ids)
         query = pds_request.query()
-        metadata, urls = pds_request.parse_response(query)
-        files = Files(urls, self.max_workers, self.directory)
-        self._save_dict(metadata)
-        files.download()
+        try:
+            metadata, urls = pds_request.parse_response(query)
+            files = Files(urls, self.max_workers, self.directory)
+            self._save_dict(metadata)
+            files.download()
+        except NoProductFoundException:
+            logger.info("No product found")
 
 
 class PdsRequest:
@@ -186,6 +193,8 @@ class PdsRequest:
         """
         files = list()
         metadata = list()
+        if rjson["ODEResults"]["Products"] == "No Products Found":
+            raise NoProductFoundException()
         products = rjson["ODEResults"]["Products"]["Product"]
         logger.info(f"{len(products)} products found")
         for product in tqdm(products, desc="Extracting URLs"):
