@@ -89,6 +89,11 @@ Usage
         $ planetary_fetch -h
 
 
+ .. code-block:: console
+
+        $ planetary_fetch --ids HRL0000CA5C* --output_dir /tmp
+
+
 
 Run tests
 ---------

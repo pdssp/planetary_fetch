@@ -367,15 +367,15 @@ class FileOrganizer:
             if fnmatch.fnmatch(self.filename.lower(), "*_if*_trr3.*"):
                 directory_path = os.path.join(
                     self.base_directory,
-                    obs_type.upper() + subdirectory,
-                    obs_type.upper() + subsubdirectory,
+                    obs_type.upper() + subdirectory.upper(),
+                    obs_type.upper() + subsubdirectory.upper(),
                     "DATA",
                 )
             elif fnmatch.fnmatch(self.filename.lower(), "*_de*_ddr1.*"):
                 directory_path = os.path.join(
                     self.base_directory,
-                    obs_type.upper() + subdirectory,
-                    obs_type.upper() + subsubdirectory,
+                    obs_type.upper() + subdirectory.upper(),
+                    obs_type.upper() + subsubdirectory.upper(),
                     "DDR",
                 )
             else:
@@ -388,15 +388,15 @@ class FileOrganizer:
             if fnmatch.fnmatch(self.filename.lower(), "*_if*_trr3.*"):
                 directory_path = os.path.join(
                     self.base_directory,
-                    obs_type.upper() + subdirectory,
-                    obs_type.upper() + subsubdirectory,
+                    obs_type.upper() + subdirectory.upper(),
+                    obs_type.upper() + subsubdirectory.upper(),
                     "DATA",
                 )
             elif fnmatch.fnmatch(self.filename.lower(), "*_de*_ddr1.*"):
                 directory_path = os.path.join(
                     self.base_directory,
-                    obs_type.upper() + subdirectory,
-                    obs_type.upper() + subsubdirectory,
+                    obs_type.upper() + subdirectory.upper(),
+                    obs_type.upper() + subsubdirectory.upper(),
                     "DDR",
                 )
             else:
