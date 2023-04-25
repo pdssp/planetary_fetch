@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2020-2021 - Centre National d'Etudes Spatiales
+# Copyright (C) 2023 - Centre National d'Etudes Spatiales
 # jean-christophe.malapert@cnes.fr
 #
 # This file is part of planetary_fetch.
@@ -62,15 +62,18 @@ class PlanetaryFetchLib:
             **kwargs: Keyword arguments that control the behavior of the library.
                 level (str): The logging level (default: "INFO").
                 max_workers (int): The maximum number of worker threads (default: 10).
+                disable_tqdm (bool) : Disable the progress bar
         """
         PlanetaryFetchLib._parse_level(kwargs["level"])
         self.__max_workers = kwargs["max_workers"]
+        self.__disable_tqdm = kwargs["disable_tqdm"]
         self.__directory = directory
         logger.info(
             f"""Starting with:
         - level = {kwargs["level"]}
         - max workers = {kwargs["max_workers"]}
         - output directory = {directory}
+        - disable_tqdm = {kwargs["disable_tqdm"]}
         """
         )
 
@@ -111,6 +114,15 @@ class PlanetaryFetchLib:
         return self.__max_workers
 
     @property
+    def disable_tqdm(self) -> bool:
+        """Disable TQDM
+
+        Returns:
+            bool: True if the progress bar is disabled otherwise False
+        """
+        return self.__disable_tqdm
+
+    @property
     def directory(self) -> str:
         """The output directory.
 
@@ -119,16 +131,28 @@ class PlanetaryFetchLib:
         """
         return self.__directory
 
-    def _save_dict(self, metadata: Dict):
+    def _save_dict(self, metadata: List):
         """Save a dictionary to a file.
 
         Args:
             metadata (dict): The dictionary to save.
         """
-        with open(
-            os.path.join(self.directory, "my_dict.json"), "w"
-        ) as outfile:
-            # Write the dictionary to the file in JSON format
+        file_path = os.path.join(self.directory, "my_dict.json")
+
+        if os.path.exists(file_path):
+            with open(file_path, "r") as infile:
+                # Load the existing metadata from the file
+                existing_metadata = json.load(infile)
+
+            # Merge the existing metadata with the new metadata
+            for item in metadata:
+                if item not in existing_metadata:
+                    existing_metadata.append(item)
+
+            metadata = existing_metadata
+
+        with open(file_path, "w") as outfile:
+            # Write the merged metadata to the file in JSON format
             json.dump(metadata, outfile, indent=5)
 
     def run(self, ids: str):
@@ -137,11 +161,16 @@ class PlanetaryFetchLib:
         Args:
             ids (str): IDs to download (* is allowed).
         """
-        pds_request = PdsRequest(ids)
+        pds_request = PdsRequest(ids, disable_tqdm=self.disable_tqdm)
         query = pds_request.query()
         try:
             metadata, urls = pds_request.parse_response(query)
-            files = Files(urls, self.max_workers, self.directory)
+            files = Files(
+                urls,
+                self.max_workers,
+                self.directory,
+                disable_tqdm=self.disable_tqdm,
+            )
             self._save_dict(metadata)
             files.download()
         except NoProductFoundException:
@@ -171,9 +200,12 @@ class PdsRequest:
         "https://oderest.rsl.wustl.edu/live2/default.aspx?query=product&results=copmf&output=json&pdsid=$pdsid"
     )
 
-    def __init__(self, pds_id: str):
+    def __init__(self, pds_id: str, **kwargs):
         self.pds_id = pds_id
         self.req = PdsRequest.ODE_REQUEST_TPL.substitute(pdsid=self.pds_id)
+        self.disable_tqdm = (
+            kwargs["disable_tqdm"] if "disable_tqdm" in kwargs else False
+        )
 
     def query(self):
         """Sends a GET request to the PDS API and returns the JSON response."""
@@ -197,7 +229,9 @@ class PdsRequest:
             raise NoProductFoundException()
         products = rjson["ODEResults"]["Products"]["Product"]
         logger.info(f"{len(products)} products found")
-        for product in tqdm(products, desc="Extracting URLs"):
+        for product in tqdm(
+            products, desc="Extracting URLs", disable=self.disable_tqdm
+        ):
             metadata.append(product)
             product_files = product["Product_files"]["Product_file"]
             for product_file in product_files:
@@ -226,7 +260,9 @@ class Files:
 
     """
 
-    def __init__(self, urls: List[str], max_workers: int, output_dir: str):
+    def __init__(
+        self, urls: List[str], max_workers: int, output_dir: str, **kwargs
+    ):
         """
         Initializes a new Files instance with the given URLs, maximum number of worker threads,
         and output directory.
@@ -235,6 +271,9 @@ class Files:
         self.__urls: List[str] = urls
         self.__output_dir: str = output_dir
         self.__file_organizer = FileOrganizer(self.__output_dir)
+        self.__disable_tqdm = (
+            kwargs["disable_tqdm"] if "disable_tqdm" in kwargs else False
+        )
 
     @property
     def urls(self) -> List[str]:
@@ -242,6 +281,13 @@ class Files:
         Gets the list of URLs to download.
         """
         return self.__urls
+
+    @property
+    def disable_tqdm(self) -> bool:
+        """
+        Get the disable_tqdm
+        """
+        return self.__disable_tqdm
 
     @property
     def output_dir(self) -> str:
@@ -258,24 +304,65 @@ class Files:
         return self.__file_organizer
 
     def _download_url(self, url):
+        logger.debug(f"Downloading {url} ...")
         response = requests.get(url)
         filename = url.split("/")[-1]
         self.file_organizer.filename = filename
-        with open(
-            os.path.join(self.file_organizer.organize(), filename), "wb"
-        ) as file:
-            file.write(response.content)
-        return f"{filename} downloaded"
+        filepath: str = os.path.join(self.file_organizer.organize(), filename)
+        try:
+            if os.path.exists(filepath):
+                logger.debug(
+                    f"\t{filename} is already complete, skip the download"
+                )
+            else:
+                with open(filepath, "wb") as file:
+                    file.write(response.content)
+                logger.debug(f"\t{filename} downloaded")
+            return
+        except NotImplementedError as err:
+            logger.warning(f"\tSkip the download of {url} : {err}")
+            return
+
+    def _url_to_download(self) -> List[str]:
+        """URL to download based on the current URL already downloaded
+
+        Returns:
+            List[str]: List of URL to download
+        """
+        list_to_download = list()
+        for url in self.urls:
+            filename: str = url.split("/")[-1]
+            self.file_organizer.filename = filename
+            try:
+                filepath: str = os.path.join(
+                    self.file_organizer.organize(), filename
+                )
+                if os.path.exists(filepath):
+                    logger.info(
+                        f"\t{filename} is already downloaded, skip the download"
+                    )
+                else:
+                    list_to_download.append(url)
+
+            except NotImplementedError as err:
+                logger.warning(f"\tSkip the download of {url} : {err}")
+
+        logger.info(f"{len(list_to_download)} file(s) to download")
+        return list_to_download
 
     def download(self):
         """
         Downloads all files from the URLs list and saves them to the output directory.
         """
         completed_count = 0
+
+        # Get the URLs to download based on the current URLs already downloaded
+        list_to_download: List[str] = self._url_to_download()
+
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             completed_count = 0
             futures = []
-            for url in self.urls:
+            for url in list_to_download:
                 future = executor.submit(self._download_url, url)
                 future.add_done_callback(
                     lambda future, count=[completed_count]: count.__setitem__(
@@ -285,7 +372,11 @@ class Files:
                 futures.append(future)
 
             # Afficher une barre de progression
-            with tqdm(total=len(self.urls), desc="Downloading files") as pbar:
+            with tqdm(
+                total=len(list_to_download),
+                desc="Downloading file(s)",
+                disable=self.disable_tqdm,
+            ) as pbar:
                 while len(futures) > 0:
                     for future in futures.copy():
                         if future.done():
@@ -297,7 +388,7 @@ class Files:
 
             # Afficher le nombre total de fichiers téléchargés
             logger.info(
-                f"Total number of downloaded files : {completed_count}"
+                f"Total number of downloaded file(s) : {completed_count}"
             )
 
 
@@ -360,7 +451,6 @@ class FileOrganizer:
         Returns:
             str: the directory
         """
-        logger.debug(f"try to organize {self.filename}")
         if self.filename.lower().startswith(f"{obs_type}0000"):
             subdirectory = os.path.splitext(self.filename)[0][7:9]
             subsubdirectory = os.path.splitext(self.filename)[0][7:11]
@@ -380,7 +470,7 @@ class FileOrganizer:
                 )
             else:
                 raise NotImplementedError(
-                    f"{self.filename} does not match any case"
+                    f"{self.filename} does not match any case for storage"
                 )
         elif self.filename.lower().startswith(f"{obs_type}000"):
             subdirectory = os.path.splitext(self.filename)[0][6:9]
@@ -401,14 +491,14 @@ class FileOrganizer:
                 )
             else:
                 raise NotImplementedError(
-                    f"{self.filename} does not match any case"
+                    f"{self.filename} does not match any case for storage"
                 )
         else:
             raise NotImplementedError(
-                f"{self.filename} does not match any case"
+                f"{self.filename} does not match any case for storage"
             )
 
-        logger.debug(f"\t -> {directory_path}")
+        logger.debug(f"\t {self.filename} -> {directory_path}")
         return directory_path
 
     def organize(self) -> str:

@@ -84,14 +84,29 @@ Development
 Usage
 -----
 
+To get help:
+
 .. code-block:: console
 
         $ planetary_fetch -h
 
+Basic download :
 
  .. code-block:: console
 
         $ planetary_fetch --ids HRL0000CA5C* --output_dir /tmp
+
+Basic download with silent mode
+
+ .. code-block:: console
+
+        $ planetary_fetch --ids HRL0000CA5C* --output_dir /tmp --level CRITICAL
+
+Basic download with silent mode without progress bar
+
+ .. code-block:: console
+
+        $ planetary_fetch --ids HRL0000CA5C* --output_dir /tmp --level CRITICAL --disable_tqdm
 
 
 

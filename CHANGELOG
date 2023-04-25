@@ -1,4 +1,14 @@
-### Use upper case for xxyy (HEAD -> main)
+### Add an option to make disable the progress bar Add cache capabilities to avoid re-downloading data (HEAD -> main)
+>Tue, 25 Apr 2023 13:54:41 +0200
+
+>Author: Jean-Christophe Malapert (jean-christophe.malapert@cnes.fr)
+
+>Commiter: Jean-Christophe Malapert (jean-christophe.malapert@cnes.fr)
+
+
+
+
+### Use upper case for xxyy (tag: 1.0.2, origin/main)
 >Mon, 24 Apr 2023 15:34:36 +0200
 
 >Author: Jean-Christophe Malapert (jean-christophe.malapert@cnes.fr)
@@ -8,7 +18,7 @@
 
 
 
-### Handling No product found exception (tag: 1.0.1, origin/main)
+### Handling No product found exception (tag: 1.0.1)
 >Thu, 20 Apr 2023 22:22:37 +0200
 
 >Author: Jean-Christophe Malapert (jean-christophe.malapert@cnes.fr)

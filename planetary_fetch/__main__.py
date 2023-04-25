@@ -109,6 +109,12 @@ def parse_cli() -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "--disable_tqdm",
+        action="store_true",
+        help="Disable progress bar (default: %(default)s)",
+    )
+
+    parser.add_argument(
         "--level",
         choices=[
             "INFO",
@@ -136,6 +142,7 @@ def run():
             options_cli.output_dir,
             level=options_cli.level,
             max_workers=options_cli.max_workers,
+            disable_tqdm=options_cli.disable_tqdm,
         )
         planetary_fetch.run(options_cli.ids)
         sys.exit(0)
