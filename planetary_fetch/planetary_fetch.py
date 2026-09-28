@@ -28,20 +28,28 @@ Classes:
     PdsRequest: A class for making requests to the PDS API.
     Files: Downloads files from a list of URLs and saves them to a specified directory.
 """
+
 import fnmatch
 import json
 import logging
 import os
+import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from string import Template
 from typing import Dict
 from typing import List
+from urllib.parse import urlsplit
 
 import requests
 from tqdm import tqdm
 
 from ._version import __name_soft__
-
+from .crism import (
+    CrismReport,
+    find_ub_products,
+    observation_directory,
+    observation_id,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -67,15 +75,14 @@ class PlanetaryFetchLib:
         PlanetaryFetchLib._parse_level(kwargs["level"])
         self.__max_workers = kwargs["max_workers"]
         self.__disable_tqdm = kwargs["disable_tqdm"]
+        self.__with_ub = kwargs.get("with_ub", False)
         self.__directory = directory
-        logger.info(
-            f"""Starting with:
+        logger.info(f"""Starting with:
         - level = {kwargs["level"]}
         - max workers = {kwargs["max_workers"]}
         - output directory = {directory}
         - disable_tqdm = {kwargs["disable_tqdm"]}
-        """
-        )
+        """)
 
     @staticmethod
     def _parse_level(level: str):
@@ -161,6 +168,10 @@ class PlanetaryFetchLib:
         Args:
             ids (str): IDs to download (* is allowed).
         """
+        if self.__with_ub and not observation_id(ids):
+            raise ValueError(
+                "--with_ub requires a single CRISM observation ID, for example HRL000040FF*"
+            )
         pds_request = PdsRequest(ids, disable_tqdm=self.disable_tqdm)
         query = pds_request.query()
         try:
@@ -173,7 +184,42 @@ class PlanetaryFetchLib:
             )
             self._save_dict(metadata)
             files.download()
+            obs_id = observation_id(ids)
+            if obs_id:
+                ub_products = []
+                if self.__with_ub:
+                    ub_products = find_ub_products(
+                        metadata, self.directory, obs_id
+                    )
+                    self._save_dict(ub_products)
+                    ub_urls = [
+                        file["URL"]
+                        for product in ub_products
+                        for file in product["Product_files"]["Product_file"]
+                        if file.get("Type") == "Product"
+                        and urlsplit(file["URL"])
+                        .path.lower()
+                        .endswith((".img", ".lbl"))
+                    ]
+                    Files(
+                        ub_urls,
+                        self.max_workers,
+                        self.directory,
+                        disable_tqdm=self.disable_tqdm,
+                        ub_observation=obs_id,
+                    ).download()
+                report = CrismReport(
+                    metadata,
+                    self.directory,
+                    obs_id,
+                    ub_products,
+                    check_ub=self.__with_ub,
+                )
+                logger.info(f"\n{report.render()}")
+                return report
         except NoProductFoundException:
+            if self.__with_ub:
+                raise
             logger.info("No product found")
 
 
@@ -208,9 +254,54 @@ class PdsRequest:
         )
 
     def query(self):
-        """Sends a GET request to the PDS API and returns the JSON response."""
-        response = requests.get(self.req)
-        return response.json()
+        """Return all ODE products, walking the documented limit/offset pages."""
+        page_size = 100
+        # The manual specifies zero-based offsets. ODE has also been observed
+        # to return the first product for both 0 and 1, so deduplicate pages.
+        offset = 0
+        products = []
+        seen = set()
+        merged = None
+        while True:
+            response = requests.get(
+                self.req + f"&limit={page_size}&offset={offset}", timeout=60
+            )
+            response.raise_for_status()
+            result = response.json()
+            if merged is None:
+                merged = result
+            ode = result["ODEResults"]
+            if ode.get("Status", "Success") != "Success":
+                raise ValueError(f"ODE query failed: {ode.get('Status')}")
+            page = ode.get("Products", "No Products Found")
+            if page == "No Products Found" or not page:
+                break
+            page_products = page["Product"]
+            if isinstance(page_products, dict):
+                page_products = [page_products]
+            new_count = 0
+            for product in page_products:
+                key = product.get("ode_id") or (
+                    product.get("pdsid"),
+                    product.get("Product_version_id"),
+                )
+                if key not in seen:
+                    products.append(product)
+                    seen.add(key)
+                    new_count += 1
+            if not new_count and len(page_products) == page_size:
+                raise ValueError(
+                    "ODE returned the same page twice; pagination did not advance"
+                )
+            if len(page_products) < page_size:
+                break
+            offset += page_size
+        assert merged is not None
+        merged["ODEResults"]["Count"] = str(len(products))
+        merged["ODEResults"]["Products"] = (
+            {"Product": products} if products else "No Products Found"
+        )
+        return merged
 
     def parse_response(self, rjson):
         """Extracts the metadata and file URLs from the JSON response.
@@ -234,11 +325,17 @@ class PdsRequest:
         ):
             metadata.append(product)
             product_files = product["Product_files"]["Product_file"]
+            if isinstance(product_files, dict):
+                product_files = [product_files]
             for product_file in product_files:
                 url = product_file["URL"]
-                if ".lbl" in url.lower() or ".img" in url.lower():
+                if product_file.get(
+                    "Type", "Product"
+                ) == "Product" and urlsplit(url).path.lower().endswith(
+                    (".lbl", ".img")
+                ):
                     files.append(url)
-        return metadata, files
+        return metadata, list(dict.fromkeys(files))
 
 
 class Files:
@@ -274,6 +371,21 @@ class Files:
         self.__disable_tqdm = (
             kwargs["disable_tqdm"] if "disable_tqdm" in kwargs else False
         )
+        self.__ub_observation = kwargs.get("ub_observation")
+
+    def _path_for_url(self, url):
+        filename = os.path.basename(urlsplit(url).path)
+        if self.__ub_observation:
+            obs = self.__ub_observation
+            directory = os.path.join(
+                observation_directory(self.output_dir, obs), "UB"
+            )
+            os.makedirs(directory, exist_ok=True)
+        else:
+            organizer = FileOrganizer(self.output_dir)
+            organizer.filename = filename
+            directory = organizer.organize()
+        return os.path.join(directory, filename)
 
     @property
     def urls(self) -> List[str]:
@@ -305,18 +417,33 @@ class Files:
 
     def _download_url(self, url):
         logger.debug(f"Downloading {url} ...")
-        response = requests.get(url)
-        filename = url.split("/")[-1]
-        self.file_organizer.filename = filename
-        filepath: str = os.path.join(self.file_organizer.organize(), filename)
+        filepath = self._path_for_url(url)
+        filename = os.path.basename(filepath)
         try:
             if os.path.exists(filepath):
                 logger.debug(
                     f"\t{filename} is already complete, skip the download"
                 )
             else:
-                with open(filepath, "wb") as file:
-                    file.write(response.content)
+                temp_path = None
+                try:
+                    with requests.get(
+                        url, stream=True, timeout=60
+                    ) as response:
+                        response.raise_for_status()
+                        with tempfile.NamedTemporaryFile(
+                            dir=os.path.dirname(filepath), delete=False
+                        ) as file:
+                            temp_path = file.name
+                            for chunk in response.iter_content(
+                                chunk_size=1024 * 1024
+                            ):
+                                if chunk:
+                                    file.write(chunk)
+                    os.replace(temp_path, filepath)
+                finally:
+                    if temp_path and os.path.exists(temp_path):
+                        os.unlink(temp_path)
                 logger.debug(f"\t{filename} downloaded")
             return
         except NotImplementedError as err:
@@ -331,21 +458,18 @@ class Files:
         """
         list_to_download = list()
         for url in self.urls:
-            filename: str = url.split("/")[-1]
-            self.file_organizer.filename = filename
+            filename = os.path.basename(urlsplit(url).path)
             try:
-                filepath: str = os.path.join(
-                    self.file_organizer.organize(), filename
-                )
+                filepath = self._path_for_url(url)
                 if os.path.exists(filepath):
-                    logger.info(
+                    logger.debug(
                         f"\t{filename} is already downloaded, skip the download"
                     )
                 else:
                     list_to_download.append(url)
 
             except NotImplementedError as err:
-                logger.warning(f"\tSkip the download of {url} : {err}")
+                logger.debug(f"\tSkip the download of {url} : {err}")
 
         logger.info(f"{len(list_to_download)} file(s) to download")
         return list_to_download
@@ -360,31 +484,13 @@ class Files:
         list_to_download: List[str] = self._url_to_download()
 
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            completed_count = 0
-            futures = []
-            for url in list_to_download:
-                future = executor.submit(self._download_url, url)
-                future.add_done_callback(
-                    lambda future, count=[completed_count]: count.__setitem__(
-                        0, count[0] + 1
-                    )
-                )
-                futures.append(future)
-
-            # Afficher une barre de progression
-            with tqdm(
+            for _ in tqdm(
+                executor.map(self._download_url, list_to_download),
                 total=len(list_to_download),
                 desc="Downloading file(s)",
                 disable=self.disable_tqdm,
-            ) as pbar:
-                while len(futures) > 0:
-                    for future in futures.copy():
-                        if future.done():
-                            futures.remove(future)
-                            pbar.update(1)
-
-                            # Mettre à jour le nombre de téléchargements terminés
-                            completed_count = completed_count + 1
+            ):
+                completed_count += 1
 
             # Afficher le nombre total de fichiers téléchargés
             logger.info(
