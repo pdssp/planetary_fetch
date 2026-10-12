@@ -11,7 +11,7 @@ from planetary_fetch.crism import (
     _choose_ub,
     observation_directory,
 )
-from planetary_fetch.planetary_fetch import Files, PdsRequest
+from planetary_fetch.planetary_fetch import FileOrganizer, Files, PdsRequest
 
 
 def ode_page(products):
@@ -92,6 +92,27 @@ class PaginationTests(unittest.TestCase):
 
 
 class CrismTests(unittest.TestCase):
+    def test_observation_directory_matches_file_organizer_for_three_leading_zeros(
+        self,
+    ):
+        obs = "FRT00012345"
+
+        with tempfile.TemporaryDirectory() as root:
+            expected = os.path.join(root, "FRT123", "FRT12345")
+
+            self.assertEqual(
+                observation_directory(root, obs),
+                expected,
+            )
+
+            organizer = FileOrganizer(root)
+            organizer.filename = "frt00012345_01_if156s_trr3.img"
+
+            self.assertEqual(
+                organizer.organize(),
+                os.path.join(expected, "DATA"),
+            )
+
     def test_ub_uses_references_to_break_sclk_tie(self):
         label = (
             'SOURCE_PRODUCT_ID = {"CDR420854534903_UB1118400S_3", '
@@ -173,6 +194,35 @@ class CrismTests(unittest.TestCase):
                 )
                 with open(path, "rb") as stream:
                     self.assertEqual(stream.read(), url.encode())
+
+    def test_download_respects_umask(self):
+        url = "https://example.org/hrl000040ff_01_if156s_trr3.img"
+
+        def response_for(url, **_):
+            response = MagicMock()
+            response.__enter__.return_value = response
+            response.iter_content.return_value = [b"test"]
+            return response
+
+        with tempfile.TemporaryDirectory() as root:
+            previous_umask = os.umask(0o027)
+            try:
+                with patch(
+                    "planetary_fetch.planetary_fetch.requests.get",
+                    side_effect=response_for,
+                ):
+                    Files([url], 1, root, disable_tqdm=True).download()
+            finally:
+                os.umask(previous_umask)
+
+            path = os.path.join(
+                observation_directory(root, "HRL000040FF"),
+                "DATA",
+                url.rsplit("/", 1)[-1],
+            )
+
+            mode = os.stat(path).st_mode & 0o777
+            self.assertEqual(mode, 0o640)
 
     def test_cli_returns_nonzero_for_incomplete_observation(self):
         from planetary_fetch import __main__

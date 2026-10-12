@@ -24,11 +24,15 @@ def observation_id(ids):
 
 
 def observation_directory(root, obs_id):
-    start = 7 if obs_id[3:7] == "0000" else 6
+    if obs_id[3:7] == "0000":
+        start, group_length, observation_length = 7, 2, 4
+    else:
+        start, group_length, observation_length = 6, 3, 5
+
     return os.path.join(
         root,
-        obs_id[:3] + obs_id[start : start + 2],
-        obs_id[:3] + obs_id[start : start + 4],
+        obs_id[:3] + obs_id[start : start + group_length],
+        obs_id[:3] + obs_id[start : start + observation_length],
     )
 
 

@@ -440,6 +440,9 @@ class Files:
                             ):
                                 if chunk:
                                     file.write(chunk)
+                    umask = os.umask(0)
+                    os.umask(umask)
+                    os.chmod(temp_path, 0o666 & ~umask)
                     os.replace(temp_path, filepath)
                 finally:
                     if temp_path and os.path.exists(temp_path):
@@ -546,59 +549,21 @@ class FileOrganizer:
         self.__filename = value
 
     def _build_directory_path(self, obs_type: str) -> str:
-        """Define the directory based on the observation type and the filename
+        """Define the directory based on the observation type and filename."""
+        stem = os.path.splitext(self.filename)[0]
+        obs_id = stem.split("_", 1)[0].upper()
 
-        Args:
-            obs_type (str): _description_
+        if not obs_id.lower().startswith(obs_type):
+            raise NotImplementedError(
+                f"{self.filename} does not match observation type {obs_type}"
+            )
 
-        Raises:
-            NotImplementedError: Not implemented use case
+        base_directory = observation_directory(self.base_directory, obs_id)
 
-        Returns:
-            str: the directory
-        """
-        if self.filename.lower().startswith(f"{obs_type}0000"):
-            subdirectory = os.path.splitext(self.filename)[0][7:9]
-            subsubdirectory = os.path.splitext(self.filename)[0][7:11]
-            if fnmatch.fnmatch(self.filename.lower(), "*_if*_trr3.*"):
-                directory_path = os.path.join(
-                    self.base_directory,
-                    obs_type.upper() + subdirectory.upper(),
-                    obs_type.upper() + subsubdirectory.upper(),
-                    "DATA",
-                )
-            elif fnmatch.fnmatch(self.filename.lower(), "*_de*_ddr1.*"):
-                directory_path = os.path.join(
-                    self.base_directory,
-                    obs_type.upper() + subdirectory.upper(),
-                    obs_type.upper() + subsubdirectory.upper(),
-                    "DDR",
-                )
-            else:
-                raise NotImplementedError(
-                    f"{self.filename} does not match any case for storage"
-                )
-        elif self.filename.lower().startswith(f"{obs_type}000"):
-            subdirectory = os.path.splitext(self.filename)[0][6:9]
-            subsubdirectory = os.path.splitext(self.filename)[0][6:11]
-            if fnmatch.fnmatch(self.filename.lower(), "*_if*_trr3.*"):
-                directory_path = os.path.join(
-                    self.base_directory,
-                    obs_type.upper() + subdirectory.upper(),
-                    obs_type.upper() + subsubdirectory.upper(),
-                    "DATA",
-                )
-            elif fnmatch.fnmatch(self.filename.lower(), "*_de*_ddr1.*"):
-                directory_path = os.path.join(
-                    self.base_directory,
-                    obs_type.upper() + subdirectory.upper(),
-                    obs_type.upper() + subsubdirectory.upper(),
-                    "DDR",
-                )
-            else:
-                raise NotImplementedError(
-                    f"{self.filename} does not match any case for storage"
-                )
+        if fnmatch.fnmatch(self.filename.lower(), "*_if*_trr3.*"):
+            directory_path = os.path.join(base_directory, "DATA")
+        elif fnmatch.fnmatch(self.filename.lower(), "*_de*_ddr1.*"):
+            directory_path = os.path.join(base_directory, "DDR")
         else:
             raise NotImplementedError(
                 f"{self.filename} does not match any case for storage"
