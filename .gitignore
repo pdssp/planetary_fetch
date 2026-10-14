@@ -132,3 +132,4 @@ planetary_fetch-env/
 
 docs/build/
 .planetary_fetch
+.pypirc
