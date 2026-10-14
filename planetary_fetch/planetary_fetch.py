@@ -34,7 +34,7 @@ import json
 import logging
 import os
 import tempfile
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from string import Template
 from typing import Dict
 from typing import List
@@ -53,9 +53,25 @@ from .crism import (
 
 logger = logging.getLogger(__name__)
 
+# The umask is process-wide: read it once here rather than in the download
+# threads, where resetting it would briefly affect every other thread.
+_UMASK = os.umask(0)
+os.umask(_UMASK)
+
 
 class NoProductFoundException(Exception):
     """No product found"""
+
+
+class DownloadError(Exception):
+    """One or more files could not be downloaded."""
+
+    def __init__(self, failures):
+        self.failures = failures
+        super().__init__(
+            f"{len(failures)} file(s) could not be downloaded:\n  "
+            + "\n  ".join(f"{url} : {error}" for url, error in failures)
+        )
 
 
 class PlanetaryFetchLib:
@@ -183,11 +199,13 @@ class PlanetaryFetchLib:
                 disable_tqdm=self.disable_tqdm,
             )
             self._save_dict(metadata)
-            files.download()
+            failures = files.download()
+            report = None
             obs_id = observation_id(ids)
             if obs_id:
                 ub_products = []
-                if self.__with_ub:
+                # The UB selection reads the TRR3 labels, which may be missing.
+                if self.__with_ub and not failures:
                     ub_products = find_ub_products(
                         metadata, self.directory, obs_id
                     )
@@ -201,7 +219,7 @@ class PlanetaryFetchLib:
                         .path.lower()
                         .endswith((".img", ".lbl"))
                     ]
-                    Files(
+                    failures += Files(
                         ub_urls,
                         self.max_workers,
                         self.directory,
@@ -216,7 +234,9 @@ class PlanetaryFetchLib:
                     check_ub=self.__with_ub,
                 )
                 logger.info(f"\n{report.render()}")
-                return report
+            if failures:
+                raise DownloadError(failures)
+            return report
         except NoProductFoundException:
             if self.__with_ub:
                 raise
@@ -440,9 +460,7 @@ class Files:
                             ):
                                 if chunk:
                                     file.write(chunk)
-                    umask = os.umask(0)
-                    os.umask(umask)
-                    os.chmod(temp_path, 0o666 & ~umask)
+                    os.chmod(temp_path, 0o666 & ~_UMASK)
                     os.replace(temp_path, filepath)
                 finally:
                     if temp_path and os.path.exists(temp_path):
@@ -460,6 +478,7 @@ class Files:
             List[str]: List of URL to download
         """
         list_to_download = list()
+        skipped_count = 0
         for url in self.urls:
             filename = os.path.basename(urlsplit(url).path)
             try:
@@ -472,33 +491,55 @@ class Files:
                     list_to_download.append(url)
 
             except NotImplementedError as err:
+                skipped_count += 1
                 logger.debug(f"\tSkip the download of {url} : {err}")
 
+        if skipped_count:
+            logger.warning(
+                f"{skipped_count} file(s) skipped: no storage rule "
+                "(use --level DEBUG to list them)"
+            )
         logger.info(f"{len(list_to_download)} file(s) to download")
         return list_to_download
 
     def download(self):
         """
         Downloads all files from the URLs list and saves them to the output directory.
+
+        A failed file does not stop the other downloads.
+
+        Returns:
+            List[Tuple[str, Exception]]: the URLs that failed, with their error
         """
         completed_count = 0
+        failures = []
 
         # Get the URLs to download based on the current URLs already downloaded
         list_to_download: List[str] = self._url_to_download()
 
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            for _ in tqdm(
-                executor.map(self._download_url, list_to_download),
-                total=len(list_to_download),
+            futures = {
+                executor.submit(self._download_url, url): url
+                for url in list_to_download
+            }
+            for future in tqdm(
+                as_completed(futures),
+                total=len(futures),
                 desc="Downloading file(s)",
                 disable=self.disable_tqdm,
             ):
-                completed_count += 1
+                error = future.exception()
+                if error is None:
+                    completed_count += 1
+                else:
+                    logger.error(f"\tFailed to download {futures[future]} : {error}")
+                    failures.append((futures[future], error))
 
-            # Afficher le nombre total de fichiers téléchargés
-            logger.info(
-                f"Total number of downloaded file(s) : {completed_count}"
-            )
+        # Afficher le nombre total de fichiers téléchargés
+        logger.info(f"Total number of downloaded file(s) : {completed_count}")
+        if failures:
+            logger.error(f"Number of failed download(s) : {len(failures)}")
+        return failures
 
 
 class FileOrganizer:

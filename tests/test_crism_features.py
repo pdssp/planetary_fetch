@@ -6,12 +6,20 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock, patch
 
+import requests
+
 from planetary_fetch.crism import (
     CrismReport,
     _choose_ub,
     observation_directory,
 )
-from planetary_fetch.planetary_fetch import FileOrganizer, Files, PdsRequest
+from planetary_fetch.planetary_fetch import (
+    DownloadError,
+    FileOrganizer,
+    Files,
+    PdsRequest,
+    PlanetaryFetchLib,
+)
 
 
 def ode_page(products):
@@ -205,15 +213,12 @@ class CrismTests(unittest.TestCase):
             return response
 
         with tempfile.TemporaryDirectory() as root:
-            previous_umask = os.umask(0o027)
-            try:
-                with patch(
-                    "planetary_fetch.planetary_fetch.requests.get",
-                    side_effect=response_for,
-                ):
-                    Files([url], 1, root, disable_tqdm=True).download()
-            finally:
-                os.umask(previous_umask)
+            # The umask is read once at import, so patch the cached value.
+            with patch(
+                "planetary_fetch.planetary_fetch.requests.get",
+                side_effect=response_for,
+            ), patch("planetary_fetch.planetary_fetch._UMASK", 0o027):
+                Files([url], 1, root, disable_tqdm=True).download()
 
             path = os.path.join(
                 observation_directory(root, "HRL000040FF"),
@@ -223,6 +228,68 @@ class CrismTests(unittest.TestCase):
 
             mode = os.stat(path).st_mode & 0o777
             self.assertEqual(mode, 0o640)
+
+    def test_failed_download_does_not_stop_the_others(self):
+        urls = [
+            "https://example.org/hrl000040ff_01_if156s_trr3.img",
+            "https://example.org/hrl000040ff_01_if156s_trr3.lbl",
+        ]
+
+        def response_for(url, **_):
+            if url.endswith(".img"):
+                raise requests.ConnectionError("network down")
+            response = MagicMock()
+            response.__enter__.return_value = response
+            response.iter_content.return_value = [b"label"]
+            return response
+
+        with tempfile.TemporaryDirectory() as root:
+            with patch(
+                "planetary_fetch.planetary_fetch.requests.get",
+                side_effect=response_for,
+            ):
+                failures = Files(urls, 2, root, disable_tqdm=True).download()
+            data = os.path.join(
+                observation_directory(root, "HRL000040FF"), "DATA"
+            )
+            self.assertTrue(
+                os.path.isfile(os.path.join(data, urls[1].rsplit("/", 1)[-1]))
+            )
+            self.assertFalse(
+                os.path.exists(os.path.join(data, urls[0].rsplit("/", 1)[-1]))
+            )
+        self.assertEqual([url for url, _ in failures], [urls[0]])
+        self.assertIsInstance(failures[0][1], requests.ConnectionError)
+
+    def test_run_reports_then_raises_on_failed_download(self):
+        lib = PlanetaryFetchLib(
+            "/unused", level="INFO", max_workers=1, disable_tqdm=True
+        )
+        failure = ("https://example.org/x.img", OSError("boom"))
+        with patch(
+            "planetary_fetch.planetary_fetch.PdsRequest"
+        ) as request, patch(
+            "planetary_fetch.planetary_fetch.Files"
+        ) as files, patch(
+            "planetary_fetch.planetary_fetch.CrismReport"
+        ) as report, patch.object(
+            lib, "_save_dict"
+        ):
+            request.return_value.parse_response.return_value = ([], [])
+            files.return_value.download.return_value = [failure]
+            with self.assertRaises(DownloadError) as error:
+                lib.run("HRL000040FF*")
+        report.return_value.render.assert_called_once()
+        self.assertEqual(error.exception.failures, [failure])
+
+    def test_skipped_files_are_reported_as_warning(self):
+        urls = ["https://example.org/hrl000040ff_07_sc166s_edr0.img"]
+        with tempfile.TemporaryDirectory() as root:
+            with self.assertLogs(
+                "planetary_fetch.planetary_fetch", level="WARNING"
+            ) as logs:
+                Files(urls, 1, root, disable_tqdm=True).download()
+        self.assertIn("1 file(s) skipped", "\n".join(logs.output))
 
     def test_cli_returns_nonzero_for_incomplete_observation(self):
         from planetary_fetch import __main__
