@@ -81,7 +81,7 @@ tests:  ## Run tests
 	uv run pytest -ra
 
 tox:
-	uv run tox -e py310
+	uv run tox -e py311
 
 release:
 	uv build

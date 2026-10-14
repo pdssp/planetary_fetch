@@ -12,9 +12,14 @@ license-files = ["LICENSE", "AUTHORS.rst"]
 authors = [
     { name = "Jean-Christophe Malapert", email = "jean-christophe.malapert@cnes.fr" },
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 classifiers = [
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
 ]
 dependencies = [
