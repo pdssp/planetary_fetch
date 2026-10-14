@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := init
-.PHONY: prepare-dev install-dev data help lint tests coverage upload-prod-pypi upload-test-pypi update_req update_req_dev pyclean doc doc-pdf visu-doc-pdf visu-doc tox licences
+.PHONY: prepare-dev install-dev data help lint tests coverage upload-prod-pypi upload-test-pypi pyclean doc doc-pdf visu-doc-pdf visu-doc tox licences
 VENV = ".planetary_fetch"
 
 define PROJECT_HELP_MSG
@@ -23,8 +23,6 @@ Usage:\n
 	\n
 	make release\t\t\t 			Release the package as tar.gz\n
 	\n
-	make update_req\t\t			Update the version of the packages in requirements.txt\n
-	make update_req_dev\t\t 	Update the version of the packages in requirements_dev.txt\n
 	\n
 	make pyclean\t\t\t		Clean .pyc files and __pycache__ directories\n
 	\n
@@ -51,7 +49,7 @@ help:
 # -----------------------------------------------------
 #
 init:
-	python3 setup.py install
+	python3 -m pip install .
 
 #
 # Sotware Installation for user
@@ -61,13 +59,13 @@ init:
 # don’t want to install into it.
 #
 user:
-	python3 setup.py install --user
+	python3 -m pip install --user .
 
 prepare-dev:
 	cp .pypirc ~${USER} && git init && echo "python3 -m venv planetary_fetch-env && export PYTHONPATH=. && export PATH=`pwd`/planetary_fetch-env/bin:"${PATH}"" > ${VENV} && echo "source \"`pwd`/planetary_fetch-env/bin/activate\"" >> ${VENV} && scripts/install-hooks.bash && echo "\nnow source this file: \033[31msource ${VENV}\033[0m"
 
 install-dev:
-	pip install --upgrade pip && pip install -r requirements.txt && pip install -r requirements_dev.txt && pre-commit install && pre-commit autoupdate && python3 setup.py develop
+	pip install --upgrade pip && pip install -e ".[dev]" && pre-commit install && pre-commit autoupdate
 
 coverage:  ## Run tests with coverage
 	coverage erase
@@ -86,16 +84,10 @@ tox:
 	tox -e py310
 
 release:
-	python3 setup.py sdist
+	python3 -m build --sdist
 
 version:
-	python3 setup.py --version
-
-update_req:
-	pur -r requirements.txt
-
-update_req_dev:
-	pur -r requirements_dev.txt
+	python3 -m setuptools_scm
 
 pyclean:
 	find . -type f -name '*.py[co]' -delete -o -type d -name __pycache__ -delete

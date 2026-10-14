@@ -17,13 +17,13 @@
 # You should have received a copy of the GNU General Public License
 # along with Planetary Fetch.  If not, see <https://www.gnu.org/licenses/>.
 """Project metadata."""
-from pkg_resources import DistributionNotFound
-from pkg_resources import get_distribution
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version
 
 __name_soft__ = "planetary_fetch"
 try:
-    __version__ = get_distribution(__name_soft__).version
-except DistributionNotFound:
+    __version__ = version(__name_soft__)
+except PackageNotFoundError:
     __version__ = "0.0.0"
 __title__ = "Planetary Fetch"
 __description__ = "The aim of Planetary Fetch is to dowload data from PDS based on a part of the PDS ID."

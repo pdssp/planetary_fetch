@@ -1,6 +1,65 @@
 [build-system]
-requires = ["setuptools", "wheel", "setuptools_scm"]
-build-backend = 'setuptools.build_meta'
+requires = ["setuptools>=64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "planetary_fetch"
+dynamic = ["version"]
+description = "The aim of Planetary Fetch is to dowload data from PDS based on a part of the PDS ID."
+readme = { file = "README.rst", content-type = "text/x-rst" }
+license = { text = "GPL-3.0-or-later" }
+authors = [
+    { name = "Jean-Christophe Malapert", email = "jean-christophe.malapert@cnes.fr" },
+]
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "requests~=2.0",
+    "tqdm~=4.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=3",
+]
+dev = [
+    "planetary_fetch[test]",
+    "black",
+    "build",
+    "coverage",
+    "flake8",
+    "mccabe",
+    "mypy",
+    "pip-licenses",
+    "pre-commit",
+    "pylint",
+    "pytest-html",
+    "setuptools-scm>=8",
+    "tox",
+    "types-requests",
+]
+
+[project.urls]
+Homepage = "https://github.com/pole-surfaces-planetaires/planetary_fetch"
+
+[project.scripts]
+planetary_fetch = "planetary_fetch.__main__:run"
+
+[tool.setuptools.packages.find]
+include = ["planetary_fetch*"]
+
+[tool.setuptools.package-data]
+planetary_fetch = ["logging.conf"]
+
+[tool.setuptools_scm]
+fallback_version = "0.0.0"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.black]
 line-length = 79
@@ -18,11 +77,3 @@ exclude = '''
   | dist
 )/
 '''
-
-[tool.flit.metadata]
-module = "planetary_fetch"
-author = "Jean-Christophe Malapert"
-author-email = "jean-christophe.malapert@cnes.fr"
-home-page = "https://github.com/pole-surfaces-planetaires/planetary_fetch"
-classifiers = [ "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",]
-description-file = "README.rst"

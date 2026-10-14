@@ -68,7 +68,7 @@ Ready to contribute? Here's how to set up `planetary_fetch` for local developmen
 
     $ mkvirtualenv planetary_fetch
     $ cd planetary_fetch/
-    $ python setup.py develop
+    $ pip install -e ".[dev]"
 
 4. Create a branch for local development::
 
@@ -80,10 +80,10 @@ Ready to contribute? Here's how to set up `planetary_fetch` for local developmen
    tests, including testing other Python versions with tox::
 
     $ flake8 planetary_fetch tests
-    $ python setup.py test or pytest
+    $ pytest
     $ tox
 
-   To get flake8 and tox, just pip install them into your virtualenv.
+   flake8 and tox are installed by the ``dev`` extra.
 
 6. Commit your changes and push your branch to GitHub::
 
