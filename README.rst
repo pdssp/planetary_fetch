@@ -112,7 +112,42 @@ Basic download with silent mode without progress bar:
 
 .. code-block:: console
 
-    $ planetary_fetch --ids 'HRL0000CA5C*' --output_dir /tmp --level CRITICAL --disable_tqdm
+CRISM EPF observations
+----------------------
+
+For a complete CRISM targeted observation, use the observation ID followed by a
+wildcard. ODE product queries return 100 products by default. Planetary Fetch
+retrieves all result pages before downloading. For example::
+
+    planetary_fetch --ids 'HRL000040FF*' --output_dir /tmp/crism
+
+After downloading, the program prints a view-by-view DATA/DDR table. A cell is
+``OK`` only when both the IMG and LBL files are present. The final status is
+``INCOMPLETE`` if any expected view/channel pair is missing. Views are inferred
+from the observation's CRISM science products; the report does not assume that
+every observation has the same view numbers. The CLI exits with code 2 for an
+incomplete observation.
+
+To add one UB calibration pair for each S and L channel::
+
+    planetary_fetch --ids 'HRL000040FF*' --output_dir /tmp/crism --with_ub
+
+The UB selection uses the view 07 IF/TRR3 label (or the earliest IF/TRR3 view
+when 07 is absent). It considers the UB IDs listed in ``SOURCE_PRODUCT_ID``
+and chooses the closest spacecraft clock count for each channel. The selected
+UB must also match the label's frame rate, pixel binning, exposure parameter,
+and wavelength filter when those fields are present. The IMG/LBL pairs are
+stored in ``HRL40/HRL40FF/UB``. ``--with_ub`` requires a
+single complete CRISM observation ID. A failed download or missing UB reference
+causes an error instead of reporting success.
+
+The numeric fields in CDR4 UB names (frame rate, pixel binning, exposure and
+wavelength filter) follow the `ODE CRISM CDR product description`_, which links
+to the `CRISM Data Product SIS`_.
+
+.. _ODE CRISM CDR product description: https://ode.rsl.wustl.edu/moon/pagehelp/Content/Missions_Instruments/Mars%20Reconnaissance%20Orbiter/CRISM/CRISM%20Product%20Primer/CRISM%20EDR/CRISM%20CDR.htm
+.. _CRISM Data Product SIS: https://pds-geosciences.wustl.edu/mro/mro-m-crism-2-edr-v1/mrocr_0001/document/crism_dpsis.pdf
+
 
 
 Run tests

@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Planetary Fetch.  If not, see <https://www.gnu.org/licenses/>.
 """Main program."""
+
 import argparse
 import logging
 import signal
@@ -115,6 +116,12 @@ def parse_cli() -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "--with_ub",
+        action="store_true",
+        help="For a single CRISM observation, download the nearest referenced UB for S and L",
+    )
+
+    parser.add_argument(
         "--level",
         choices=[
             "INFO",
@@ -143,9 +150,10 @@ def run():
             level=options_cli.level,
             max_workers=options_cli.max_workers,
             disable_tqdm=options_cli.disable_tqdm,
+            with_ub=options_cli.with_ub,
         )
-        planetary_fetch.run(options_cli.ids)
-        sys.exit(0)
+        report = planetary_fetch.run(options_cli.ids)
+        sys.exit(0 if report is None or report.complete else 2)
     except Exception as error:  # pylint: disable=broad-except
         logging.exception(error)
         sys.exit(1)
