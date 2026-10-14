@@ -1,0 +1,19 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    "schedule:weekly"
+  ],
+  "labels": ["dependencies"],
+  "pre-commit": {
+    "enabled": true
+  },
+  "packageRules": [
+    {
+      "description": "Group CI and tooling updates to keep the PR count low",
+      "matchManagers": ["github-actions", "pre-commit"],
+      "groupName": "CI and pre-commit"
+    }
+  ]
+}
