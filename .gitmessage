@@ -1,0 +1,29 @@
+
+# <type>(<optional scope>): <subject>
+#
+# <body: what changed and why, wrapped at 72 characters>
+#
+# <footer: BREAKING CHANGE: <description>, Refs #<issue>>
+#
+# ----------------------------------------------------------------------
+# Conventional Commits - https://www.conventionalcommits.org
+#
+# The type drives the automatic release (python-semantic-release):
+#   feat      a new feature                               -> minor
+#   fix       a bug fix                                   -> patch
+#   perf      a performance improvement                   -> patch
+#   build     packaging, build system, dependencies       -> no release
+#   ci        CI configuration                            -> no release
+#   docs      documentation only                          -> no release
+#   refactor  code change that neither fixes nor adds     -> no release
+#   style     formatting, no code change                  -> no release
+#   test      adding or fixing tests                      -> no release
+#   chore     anything else (tooling, maintenance)        -> no release
+#
+# Breaking change -> major: add "!" after the type/scope (feat!: ...)
+# or a "BREAKING CHANGE: ..." footer.
+#
+# Subject: imperative mood, lower case, no final period, <= 50 chars.
+#   e.g. fix(crism): use the right directory for FRT0001xxxx IDs
+#
+# Lines starting with "#" are ignored.

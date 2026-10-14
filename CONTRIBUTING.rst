@@ -85,10 +85,14 @@ Ready to contribute? Here's how to set up `planetary_fetch` for local developmen
 
    flake8 and tox are installed by the ``dev`` extra.
 
-6. Commit your changes and push your branch to GitHub::
+6. Commit your changes and push your branch to GitHub. Commit messages follow
+   `Conventional Commits <https://www.conventionalcommits.org>`_: the type
+   (``feat``, ``fix``, ``docs``...) decides the next release version. The
+   ``.gitmessage`` template lists the types; ``make install-dev`` enables it,
+   or run ``git config commit.template .gitmessage``::
 
     $ git add .
-    $ git commit -m "Your detailed description of your changes."
+    $ git commit
     $ git push origin name-of-your-bugfix-or-feature
 
 7. Submit a pull request through the GitHub website.
