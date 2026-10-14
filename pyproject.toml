@@ -58,6 +58,14 @@ planetary_fetch = ["logging.conf"]
 [tool.setuptools_scm]
 fallback_version = "0.0.0"
 
+[tool.semantic_release]
+# The version lives only in git tags (read by setuptools-scm): no file to stamp.
+tag_format = "{version}"
+allow_zero_version = false
+
+[tool.semantic_release.branches.main]
+match = "main"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
