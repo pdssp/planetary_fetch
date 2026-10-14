@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Planetary Fetch - The aim of Planetary Fetch is to dowload data from PDS based on a part of the PDS ID.
+# Planetary Fetch - The aim of Planetary Fetch is to download data from PDS based on a part of the PDS ID.
 # Copyright (C) 2023 - CNES (Jean-Christophe Malapert for Pôle Surfaces Planétaires)
 #
 # This file is part of Planetary Fetch.
@@ -26,8 +26,8 @@ try:
 except PackageNotFoundError:
     __version__ = "0.0.0"
 __title__ = "Planetary Fetch"
-__description__ = "The aim of Planetary Fetch is to dowload data from PDS based on a part of the PDS ID."
-__url__ = "https://github.com/pole-surfaces-planetaires/planetary_fetch"
+__description__ = "The aim of Planetary Fetch is to download data from PDS based on a part of the PDS ID."
+__url__ = "https://github.com/pdssp/planetary_fetch"
 __author__ = "Jean-Christophe Malapert"
 __author_email__ = "jean-christophe.malapert@cnes.fr"
 __license__ = "GNU General Public License v3"

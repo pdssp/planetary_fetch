@@ -5,7 +5,7 @@ build-backend = "uv_build"
 [project]
 name = "planetary_fetch"
 version = "1.1.0"
-description = "The aim of Planetary Fetch is to dowload data from PDS based on a part of the PDS ID."
+description = "The aim of Planetary Fetch is to download data from PDS based on a part of the PDS ID."
 readme = { file = "README.rst", content-type = "text/x-rst" }
 license = "GPL-3.0-or-later"
 license-files = ["LICENSE", "AUTHORS.rst"]
@@ -47,7 +47,7 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/pole-surfaces-planetaires/planetary_fetch"
+Homepage = "https://github.com/pdssp/planetary_fetch"
 
 [project.scripts]
 planetary_fetch = "planetary_fetch.__main__:run"

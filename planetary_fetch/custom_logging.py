@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Planetary Fetch - The aim of Planetary Fetch is to dowload data from PDS based on a part of the PDS ID.
+# Planetary Fetch - The aim of Planetary Fetch is to download data from PDS based on a part of the PDS ID.
 # Copyright (C) 2023 - CNES (Jean-Christophe Malapert for Pôle Surfaces Planétaires)
 #
 # This file is part of Planetary Fetch.

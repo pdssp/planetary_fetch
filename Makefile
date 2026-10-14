@@ -11,8 +11,8 @@ Usage:\n
 	-------------------------------------------------------------------------\n
 	\t\tInstallation\n
 	-------------------------------------------------------------------------\n
-	make\t\t\t\t                Install planetary_fetch in the system (root)\n
-	make user\t\t\t 			Install planetary_fetch for non-root usage\n
+	make\t\t\t\t                Install the planetary_fetch command (uv tool)\n
+	make user\t\t\t 			Same as make\n
 	\n
 	-------------------------------------------------------------------------\n
 	\t\tDevelopment\n
