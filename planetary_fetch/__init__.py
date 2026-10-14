@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Planetary Fetch - The aim of Planetary Fetch is to dowload data from PDS based on a part of the PDS ID.
+# Planetary Fetch - The aim of Planetary Fetch is to download data from PDS based on a part of the PDS ID.
 # Copyright (C) 2023 - CNES (Jean-Christophe Malapert for Pôle Surfaces Planétaires)
 #
 # This file is part of Planetary Fetch.
@@ -16,7 +16,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Planetary Fetch.  If not, see <https://www.gnu.org/licenses/>.
-"""The aim of Planetary Fetch is to dowload data from PDS based on a part of the PDS ID."""
+"""The aim of Planetary Fetch is to download data from PDS based on a part of the PDS ID."""
 import logging.config
 import os
 from logging import NullHandler

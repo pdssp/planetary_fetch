@@ -10,4 +10,4 @@ Development Lead
 Contributors
 ------------
 
-None yet.
+* rrauhun (https://github.com/rrauhun)

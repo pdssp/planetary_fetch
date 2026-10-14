@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := init
-.PHONY: prepare-dev install-dev data help lint tests coverage upload-prod-pypi upload-test-pypi update_req update_req_dev pyclean doc doc-pdf visu-doc-pdf visu-doc tox licences
+.PHONY: prepare-dev install-dev data help lint tests coverage upload-prod-pypi upload-test-pypi pyclean doc doc-pdf visu-doc-pdf visu-doc tox licences
 VENV = ".planetary_fetch"
 
 define PROJECT_HELP_MSG
@@ -11,8 +11,8 @@ Usage:\n
 	-------------------------------------------------------------------------\n
 	\t\tInstallation\n
 	-------------------------------------------------------------------------\n
-	make\t\t\t\t                Install planetary_fetch in the system (root)\n
-	make user\t\t\t 			Install planetary_fetch for non-root usage\n
+	make\t\t\t\t                Install the planetary_fetch command (uv tool)\n
+	make user\t\t\t 			Same as make\n
 	\n
 	-------------------------------------------------------------------------\n
 	\t\tDevelopment\n
@@ -23,8 +23,6 @@ Usage:\n
 	\n
 	make release\t\t\t 			Release the package as tar.gz\n
 	\n
-	make update_req\t\t			Update the version of the packages in requirements.txt\n
-	make update_req_dev\t\t 	Update the version of the packages in requirements_dev.txt\n
 	\n
 	make pyclean\t\t\t		Clean .pyc files and __pycache__ directories\n
 	\n
@@ -51,7 +49,7 @@ help:
 # -----------------------------------------------------
 #
 init:
-	python3 setup.py install
+	uv tool install .
 
 #
 # Sotware Installation for user
@@ -61,41 +59,35 @@ init:
 # don’t want to install into it.
 #
 user:
-	python3 setup.py install --user
+	uv tool install .
 
 prepare-dev:
-	cp .pypirc ~${USER} && git init && echo "python3 -m venv planetary_fetch-env && export PYTHONPATH=. && export PATH=`pwd`/planetary_fetch-env/bin:"${PATH}"" > ${VENV} && echo "source \"`pwd`/planetary_fetch-env/bin/activate\"" >> ${VENV} && scripts/install-hooks.bash && echo "\nnow source this file: \033[31msource ${VENV}\033[0m"
+	git init && echo "python3 -m venv planetary_fetch-env && export PYTHONPATH=. && export PATH=`pwd`/planetary_fetch-env/bin:"${PATH}"" > ${VENV} && echo "source \"`pwd`/planetary_fetch-env/bin/activate\"" >> ${VENV} && scripts/install-hooks.bash && echo "\nnow source this file: \033[31msource ${VENV}\033[0m"
 
 install-dev:
-	pip install --upgrade pip && pip install -r requirements.txt && pip install -r requirements_dev.txt && pre-commit install && pre-commit autoupdate && python3 setup.py develop
+	uv sync && uv run pre-commit install && uv run pre-commit autoupdate && git config commit.template .gitmessage
 
 coverage:  ## Run tests with coverage
-	coverage erase
-	coverage run --include=planetary_fetch/* -m pytest -ra
-	coverage report -m
+	uv run coverage erase
+	uv run coverage run --include=planetary_fetch/* -m pytest -ra
+	uv run coverage report -m
 
 lint:  ## Lint and static-check
-	flake8 --ignore=E203,E266,E501,W503,F403,F401 --max-line-length=79 --max-complexity=18 --select=B,C,E,F,W,T4,B9 planetary_fetch
-	pylint planetary_fetch
-	mypy planetary_fetch
+	uv run flake8 --ignore=E203,E266,E501,W503,F403,F401 --max-line-length=79 --max-complexity=18 --select=B,C,E,F,W,T4,B9 planetary_fetch
+	uv run pylint planetary_fetch
+	uv run mypy planetary_fetch
 
 tests:  ## Run tests
-	pytest -ra
+	uv run pytest -ra
 
 tox:
-	tox -e py310
+	uv run tox -e py311
 
 release:
-	python3 setup.py sdist
+	uv build
 
 version:
-	python3 setup.py --version
-
-update_req:
-	pur -r requirements.txt
-
-update_req_dev:
-	pur -r requirements_dev.txt
+	uv version --short
 
 pyclean:
 	find . -type f -name '*.py[co]' -delete -o -type d -name __pycache__ -delete

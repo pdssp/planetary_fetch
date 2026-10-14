@@ -1,6 +1,78 @@
 [build-system]
-requires = ["setuptools", "wheel", "setuptools_scm"]
-build-backend = 'setuptools.build_meta'
+requires = ["uv_build>=0.9.15,<0.10.0"]
+build-backend = "uv_build"
+
+[project]
+name = "planetary_fetch"
+version = "1.1.0"
+description = "The aim of Planetary Fetch is to download data from PDS based on a part of the PDS ID."
+readme = { file = "README.rst", content-type = "text/x-rst" }
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE", "AUTHORS.rst"]
+authors = [
+    { name = "Jean-Christophe Malapert", email = "jean-christophe.malapert@cnes.fr" },
+]
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "requests~=2.0",
+    "tqdm~=4.0",
+]
+
+[dependency-groups]
+test = [
+    "pytest>=3",
+]
+dev = [
+    { include-group = "test" },
+    "black",
+    "coverage",
+    "flake8",
+    "mccabe",
+    "mypy",
+    "pip-licenses",
+    "pre-commit",
+    "pylint",
+    "pytest-html",
+    "tox",
+    "types-requests",
+]
+
+[project.urls]
+Homepage = "https://github.com/pdssp/planetary_fetch"
+
+[project.scripts]
+planetary_fetch = "planetary_fetch.__main__:run"
+
+[tool.uv.build-backend]
+# Flat layout: the package is at the repository root, not under src/.
+module-root = ""
+
+[tool.semantic_release]
+tag_format = "{version}"
+allow_zero_version = false
+version_toml = ["pyproject.toml:project.version"]
+commit_message = "chore(release): {version}"
+# uv.lock records the project version: refresh it in the release commit.
+build_command = """
+    uv lock --upgrade-package planetary-fetch
+    git add uv.lock
+    uv build
+"""
+
+[tool.semantic_release.branches.main]
+match = "main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.black]
 line-length = 79
@@ -18,11 +90,3 @@ exclude = '''
   | dist
 )/
 '''
-
-[tool.flit.metadata]
-module = "planetary_fetch"
-author = "Jean-Christophe Malapert"
-author-email = "jean-christophe.malapert@cnes.fr"
-home-page = "https://github.com/pole-surfaces-planetaires/planetary_fetch"
-classifiers = [ "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",]
-description-file = "README.rst"

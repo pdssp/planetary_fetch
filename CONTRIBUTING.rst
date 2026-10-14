@@ -15,7 +15,7 @@ Types of Contributions
 Report Bugs
 ~~~~~~~~~~~
 
-Report bugs at https://github.com/pole-surfaces-planetaires/planetary_fetch/issues.
+Report bugs at https://github.com/pdssp/planetary_fetch/issues.
 
 If you are reporting a bug, please include:
 
@@ -45,7 +45,7 @@ articles, and such.
 Submit Feedback
 ~~~~~~~~~~~~~~~
 
-The best way to send feedback is to file an issue at https://github.com/pole-surfaces-planetaires/planetary_fetch/issues.
+The best way to send feedback is to file an issue at https://github.com/pdssp/planetary_fetch/issues.
 
 If you are proposing a feature:
 
@@ -64,11 +64,10 @@ Ready to contribute? Here's how to set up `planetary_fetch` for local developmen
 
     $ git clone git@github.com:your_name_here/planetary_fetch.git
 
-3. Install your local copy into a virtualenv. Assuming you have virtualenvwrapper installed, this is how you set up your fork for local development::
+3. Install your local copy and the development tools with `uv <https://docs.astral.sh/uv/>`_::
 
-    $ mkvirtualenv planetary_fetch
     $ cd planetary_fetch/
-    $ python setup.py develop
+    $ uv sync
 
 4. Create a branch for local development::
 
@@ -79,16 +78,20 @@ Ready to contribute? Here's how to set up `planetary_fetch` for local developmen
 5. When you're done making changes, check that your changes pass flake8 and the
    tests, including testing other Python versions with tox::
 
-    $ flake8 planetary_fetch tests
-    $ python setup.py test or pytest
-    $ tox
+    $ uv run flake8 planetary_fetch tests
+    $ uv run pytest
+    $ uv run tox
 
-   To get flake8 and tox, just pip install them into your virtualenv.
+   flake8 and tox are installed by the ``dev`` dependency group.
 
-6. Commit your changes and push your branch to GitHub::
+6. Commit your changes and push your branch to GitHub. Commit messages follow
+   `Conventional Commits <https://www.conventionalcommits.org>`_: the type
+   (``feat``, ``fix``, ``docs``...) decides the next release version. The
+   ``.gitmessage`` template lists the types; ``make install-dev`` enables it,
+   or run ``git config commit.template .gitmessage``::
 
     $ git add .
-    $ git commit -m "Your detailed description of your changes."
+    $ git commit
     $ git push origin name-of-your-bugfix-or-feature
 
 7. Submit a pull request through the GitHub website.
