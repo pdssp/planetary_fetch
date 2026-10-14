@@ -1,20 +1,20 @@
 [build-system]
-requires = ["setuptools>=64", "setuptools-scm>=8"]
-build-backend = "setuptools.build_meta"
+requires = ["uv_build>=0.9.15,<0.10.0"]
+build-backend = "uv_build"
 
 [project]
 name = "planetary_fetch"
-dynamic = ["version"]
+version = "1.1.0"
 description = "The aim of Planetary Fetch is to dowload data from PDS based on a part of the PDS ID."
 readme = { file = "README.rst", content-type = "text/x-rst" }
-license = { text = "GPL-3.0-or-later" }
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE", "AUTHORS.rst"]
 authors = [
     { name = "Jean-Christophe Malapert", email = "jean-christophe.malapert@cnes.fr" },
 ]
 requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Operating System :: OS Independent",
 ]
 dependencies = [
@@ -22,14 +22,13 @@ dependencies = [
     "tqdm~=4.0",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 test = [
     "pytest>=3",
 ]
 dev = [
-    "planetary_fetch[test]",
+    { include-group = "test" },
     "black",
-    "build",
     "coverage",
     "flake8",
     "mccabe",
@@ -38,7 +37,6 @@ dev = [
     "pre-commit",
     "pylint",
     "pytest-html",
-    "setuptools-scm>=8",
     "tox",
     "types-requests",
 ]
@@ -49,19 +47,21 @@ Homepage = "https://github.com/pole-surfaces-planetaires/planetary_fetch"
 [project.scripts]
 planetary_fetch = "planetary_fetch.__main__:run"
 
-[tool.setuptools.packages.find]
-include = ["planetary_fetch*"]
-
-[tool.setuptools.package-data]
-planetary_fetch = ["logging.conf"]
-
-[tool.setuptools_scm]
-fallback_version = "0.0.0"
+[tool.uv.build-backend]
+# Flat layout: the package is at the repository root, not under src/.
+module-root = ""
 
 [tool.semantic_release]
-# The version lives only in git tags (read by setuptools-scm): no file to stamp.
 tag_format = "{version}"
 allow_zero_version = false
+version_toml = ["pyproject.toml:project.version"]
+commit_message = "chore(release): {version}"
+# uv.lock records the project version: refresh it in the release commit.
+build_command = """
+    uv lock --upgrade-package planetary-fetch
+    git add uv.lock
+    uv build
+"""
 
 [tool.semantic_release.branches.main]
 match = "main"

@@ -49,7 +49,7 @@ help:
 # -----------------------------------------------------
 #
 init:
-	python3 -m pip install .
+	uv tool install .
 
 #
 # Sotware Installation for user
@@ -59,35 +59,35 @@ init:
 # don’t want to install into it.
 #
 user:
-	python3 -m pip install --user .
+	uv tool install .
 
 prepare-dev:
 	cp .pypirc ~${USER} && git init && echo "python3 -m venv planetary_fetch-env && export PYTHONPATH=. && export PATH=`pwd`/planetary_fetch-env/bin:"${PATH}"" > ${VENV} && echo "source \"`pwd`/planetary_fetch-env/bin/activate\"" >> ${VENV} && scripts/install-hooks.bash && echo "\nnow source this file: \033[31msource ${VENV}\033[0m"
 
 install-dev:
-	pip install --upgrade pip && pip install -e ".[dev]" && pre-commit install && pre-commit autoupdate && git config commit.template .gitmessage
+	uv sync && uv run pre-commit install && uv run pre-commit autoupdate && git config commit.template .gitmessage
 
 coverage:  ## Run tests with coverage
-	coverage erase
-	coverage run --include=planetary_fetch/* -m pytest -ra
-	coverage report -m
+	uv run coverage erase
+	uv run coverage run --include=planetary_fetch/* -m pytest -ra
+	uv run coverage report -m
 
 lint:  ## Lint and static-check
-	flake8 --ignore=E203,E266,E501,W503,F403,F401 --max-line-length=79 --max-complexity=18 --select=B,C,E,F,W,T4,B9 planetary_fetch
-	pylint planetary_fetch
-	mypy planetary_fetch
+	uv run flake8 --ignore=E203,E266,E501,W503,F403,F401 --max-line-length=79 --max-complexity=18 --select=B,C,E,F,W,T4,B9 planetary_fetch
+	uv run pylint planetary_fetch
+	uv run mypy planetary_fetch
 
 tests:  ## Run tests
-	pytest -ra
+	uv run pytest -ra
 
 tox:
-	tox -e py310
+	uv run tox -e py310
 
 release:
-	python3 -m build --sdist
+	uv build
 
 version:
-	python3 -m setuptools_scm
+	uv version --short
 
 pyclean:
 	find . -type f -name '*.py[co]' -delete -o -type d -name __pycache__ -delete

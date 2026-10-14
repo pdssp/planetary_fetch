@@ -30,12 +30,19 @@ To install Planetary Fetch, run this command in your terminal:
 
     $ pip install git+https://github.com/pdssp/planetary_fetch
 
+or, to install the ``planetary_fetch`` command in its own environment with `uv`_:
+
+.. code-block:: console
+
+    $ uv tool install git+https://github.com/pdssp/planetary_fetch
+
 This is the preferred method to install Planetary Fetch, as it will always install the most recent stable release.
 
 If you don't have `pip`_ installed, this `Python installation guide`_ can guide
 you through the process.
 
 .. _pip: https://pip.pypa.io
+.. _uv: https://docs.astral.sh/uv/
 .. _Python installation guide: http://docs.python-guide.org/en/latest/starting/installation/
 
 
