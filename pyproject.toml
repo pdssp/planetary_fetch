@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "planetary_fetch"
-version = "1.1.0"
+version = "2.0.0"
 description = "The aim of Planetary Fetch is to download data from PDS based on a part of the PDS ID."
 readme = { file = "README.rst", content-type = "text/x-rst" }
 license = "GPL-3.0-or-later"
